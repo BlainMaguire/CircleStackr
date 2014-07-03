@@ -1,0 +1,128 @@
+<html>
+    <body>
+        <h3>CircleStackr - Convert an image to concentric circles</h3>
+        <input type="file" id="imageLoader" name="imageLoader"/><br />
+        <img id="uploadPreview" alt="Source image from your computer" style="max-width:45%;"/>
+        <img id="canvasAsImage" alt="Generated image will go here. Right click to save!" style="max-width:45%;">
+        <canvas id="imageCanvas" style="display:none;"></canvas>
+        <p><strong>Note</strong>: Larger images may take a while to process. Try a small image first.</p>
+        <script type="text/javascript">
+            var imageLoader = document.getElementById('imageLoader');
+                imageLoader.addEventListener('change', handleImage, false);
+            var canvas = document.getElementById('imageCanvas');
+            var ctx = canvas.getContext('2d');
+
+            function addPointWithinBounds(x,y,boundsX,boundsY, points) {
+                if (x < boundsX && y < boundsY && x >= 0 && y >=0) {
+                    points.push(ctx.getImageData(x, y, 1, 1).data);
+                }
+            }
+
+            function rasterWithinBounds(x,y,boundsX,boundsY, points) {
+                if (x < boundsX && y < boundsY && x >= 0 && y >=0) {
+                    ctx.fillRect(x,y,1,1);
+                }
+            }
+
+            function getCirclePointsOnImage(xCenter, yCenter, radius, imageWidth, imageHeight)
+                {
+                    var circlePoints = [];
+                    var x, y, r2;
+
+                    r2 = radius * radius;
+                    addPointWithinBounds(xCenter, yCenter + radius, imageWidth, imageHeight, circlePoints);
+                    addPointWithinBounds(xCenter, yCenter - radius, imageWidth, imageHeight, circlePoints);
+                    addPointWithinBounds(xCenter + radius, yCenter, imageWidth, imageHeight, circlePoints);
+                    addPointWithinBounds(xCenter - radius, yCenter, imageWidth, imageHeight, circlePoints);
+
+                    y = radius;
+                    x = 1;
+                    y = Math.floor(Math.sqrt(r2 - 1) + 0.5);
+                    while (x < y) {
+                        addPointWithinBounds(xCenter + x, yCenter + y, imageWidth, imageHeight, circlePoints);
+                        addPointWithinBounds(xCenter + x, yCenter - y, imageWidth, imageHeight, circlePoints);
+                        addPointWithinBounds(xCenter - x, yCenter + y, imageWidth, imageHeight, circlePoints);
+                        addPointWithinBounds(xCenter - x, yCenter - y, imageWidth, imageHeight, circlePoints);
+                        addPointWithinBounds(xCenter + y, yCenter + x, imageWidth, imageHeight, circlePoints);
+                        addPointWithinBounds(xCenter + y, yCenter - x, imageWidth, imageHeight, circlePoints);
+                        addPointWithinBounds(xCenter - y, yCenter + x, imageWidth, imageHeight, circlePoints);
+                        addPointWithinBounds(xCenter - y, yCenter - x, imageWidth, imageHeight, circlePoints);
+                        x += 1;
+                        y = Math.floor(Math.sqrt(r2 - x*x) + 0.5);
+                    }
+                    if (x == y) {
+                        addPointWithinBounds(xCenter + x, yCenter + y, imageWidth, imageHeight, circlePoints);
+                        addPointWithinBounds(xCenter + x, yCenter - y, imageWidth, imageHeight, circlePoints);
+                        addPointWithinBounds(xCenter - x, yCenter + y, imageWidth, imageHeight, circlePoints);
+                        addPointWithinBounds(xCenter - x, yCenter - y, imageWidth, imageHeight, circlePoints);
+                    }
+                    return circlePoints;
+                }
+                
+                
+            function getAverage(points) {
+                color = "rgba(255,0,0,1)";
+                var totalR = 0, totalG = 0, totalB = 0, totalA = 0;
+                for(var p = 0; p < points.length; p++) {
+                    totalR += points[p][0];
+                    totalG += points[p][1];
+                    totalB += points[p][2];
+                    totalA += points[p][3];
+                }
+                return [totalR, totalG, totalB, totalA].map(function(x) { return Math.round(x / points.length)});
+            }
+
+            function setCircleImage(img) {
+                var imWidth = img.width,
+                    imHeight = img.height;
+                    canvas.width = imWidth;
+                    canvas.height = imHeight;
+                    
+                    ctx.drawImage(img,0,0);
+                    var imageData = ctx.getImageData(0, 0, imWidth, imHeight);
+                    var data = imageData.data;
+
+                    var max_dimension = imWidth > imWidth ? imWidth : imHeight;
+                    var centerX = Math.floor(imWidth/2),
+                        centerY = Math.floor(imHeight/2);
+                    for (var currRadius = 1; currRadius < max_dimension; currRadius+=1) {
+                        var myPoints = getCirclePointsOnImage(centerX,centerY,currRadius,imWidth, imHeight);
+                        var aveArr = getAverage(myPoints);
+                        if (myPoints.length > 0) {
+                            var aveStl = 'rgba('+
+                                             aveArr[0]+','+
+                                             aveArr[1]+','+
+                                             aveArr[2]+','+
+                                             1//aveArr[3]/255+
+                                            ')';
+                            
+                            ctx.strokeStyle = aveStl;
+                            ctx.beginPath();
+                            ctx.lineWidth = 2;
+                            ctx.arc(centerX, centerY, currRadius, 0,2*Math.PI);
+                            ctx.closePath();
+                            ctx.stroke();
+                        }
+                    }
+                  var dataURL = canvas.toDataURL();
+                  // save canvas as image so we can save it
+                  document.getElementById('canvasAsImage').src = dataURL;
+            }
+
+            function handleImage(e){
+                var reader = new FileReader();
+                var imgObj = new Image();
+                reader.readAsDataURL(e.target.files[0]);
+                reader.onload = function(event){
+                    document.getElementById("uploadPreview").src = event.target.result;
+                    document.getElementById("canvasAsImage").alt = "Loading Circles...";
+                    imgObj.src = event.target.result;
+                }
+                imgObj.onload = function(){
+                    setCircleImage(imgObj);
+                    document.getElementById("canvasAsImage").alt = 'Right click to save!';
+                };
+            }
+        </script>
+    </body>
+</html>
