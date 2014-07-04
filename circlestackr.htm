@@ -77,12 +77,13 @@
                     imHeight = img.height;
                     canvas.width = imWidth;
                     canvas.height = imHeight;
+                    console.log(imWidth, imHeight);
                     
                     ctx.drawImage(img,0,0);
                     var imageData = ctx.getImageData(0, 0, imWidth, imHeight);
                     var data = imageData.data;
 
-                    var max_dimension = imWidth > imWidth ? imWidth : imHeight;
+                    var max_dimension = imWidth > imHeight ? imWidth : imHeight;
                     var centerX = Math.floor(imWidth/2),
                         centerY = Math.floor(imHeight/2);
                     for (var currRadius = 1; currRadius < max_dimension; currRadius+=1) {
